@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>chat</title>
+    <style>
+        .me {
+            display: flex;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <div id="result">
+        <!-- <div class="repondeur">cc</div>
+        <div class="me">cc</div> -->
+    </div>
+    <textarea name="message_chat" id="message_chat" cols="30" rows="10"></textarea>
+    <button id="send">Send</button>
+</body>
+<script>
+    class Chat {
+        id_user;
+        socket;
+
+        constructor(id_user) {
+            this.id_user = id_user;
+            this.socket = new WebSocket('ws://localhost:3000');
+
+            // Gestion des événements WebSocket
+            this.socket.addEventListener('open', (event) => {
+                console.log('WebSocket connection opened');
+            });
+
+            this.socket.addEventListener('message', (event) => {
+                console.log('Received message:', event.data);
+
+                if (event.data instanceof Blob) {
+                    // Si le message est un Blob, vous pouvez le traiter en conséquence
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        addresult(JSON.parse(reader.result).message, 'repondeur');
+                    };
+                    reader.readAsText(event.data);
+                } else {
+                    // Si le message n'est pas un Blob, affichez-le directement
+                    addresult(event.data, 'repondeur');
+                }
+            });
+
+            this.socket.addEventListener('close', (event) => {
+                console.log('WebSocket connection closed:', event);
+            });
+
+            this.socket.addEventListener('error', (event) => {
+                console.error('WebSocket error:', event);
+            });
+        }
+
+        send(message) {
+            console.log("Sending message:", message);
+            this.socket.send(JSON.stringify({ id_user: this.id_user, message: message }));
+        }
+    }
+
+    var button_sent = document.getElementById("send");
+    var message_chat = document.getElementById("message_chat");
+    var result = document.getElementById("result");
+    var id_user = localStorage.getItem("id_user");
+
+    function addresult(texte, type) {
+        var div = document.createElement("div");
+        div.setAttribute("class", type);
+        div.innerHTML = texte;
+        result.appendChild(div);
+    }
+
+    var chat;
+
+    button_sent.onclick = (e) => {
+        if (message_chat.value.length > 0) {
+            addresult(message_chat.value, 'me');
+            chat.send(message_chat.value);
+            message_chat.value = '';
+        }
+    };
+
+    if (id_user) {
+        chat = new Chat(id_user);
+    } else {
+        var identifiantUnique = Math.floor(Math.random() * 1000000000);
+        console.log(identifiantUnique);
+        localStorage.setItem("id_user", identifiantUnique);
+        chat = new Chat(identifiantUnique);
+    }
+</script>
+</html>

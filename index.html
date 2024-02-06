@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-time Square Movement</title>
+  <style>
+    #square {
+      width: 50px;
+      height: 50px;
+      background-color: blue;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div id="square"></div>
+
+<script>
+  const square = document.getElementById('square');
+  let positionX = 0;
+  let positionY = 0;
+
+  // Établir une connexion WebSocket avec le serveur
+  const socket = new WebSocket('ws://localhost:3000');
+
+  // Gestion des erreurs de la connexion WebSocket
+  socket.addEventListener('error', (event) => {
+    console.error('Erreur de connexion WebSocket :', event);
+  });
+
+  socket.addEventListener('message', (event) => {
+    console.log('Message brut du serveur :', event.data);
+
+    if (typeof event.data === 'string') {
+        try {
+        const newPosition = JSON.parse(event.data);
+        positionX = newPosition.x;
+        positionY = newPosition.y;
+        square.style.top = positionY + 'px';
+        square.style.left = positionX + 'px';
+        } catch (error) {
+        console.error('Erreur lors de l\'analyse JSON :', error);
+        }
+    } else if (event.data instanceof Blob) {
+        // Si c'est un objet Blob, le convertir en chaîne JSON
+        event.data.text().then((jsonString) => {
+            try {
+                const newPosition = JSON.parse(jsonString);
+                positionX = newPosition.x;
+                positionY = newPosition.y;
+                square.style.top = positionY + 'px';
+                square.style.left = positionX + 'px';
+            } catch (error) {
+                console.error('Erreur lors de l\'analyse JSON :', error);
+            }
+        });
+    } else {
+        console.log('Message reçu du serveur (non traité) :', event.data);
+    }
+  });
+
+  window.addEventListener('keydown', (event) => {
+    // Déplacer le carré localement
+    switch (event.key) {
+      case 'ArrowUp':
+        positionY -= 10;
+        break;
+      case 'ArrowDown':
+        positionY += 10;
+        break;
+      case 'ArrowLeft':
+        positionX -= 10;
+        break;
+      case 'ArrowRight':
+        positionX += 10;
+        break;
+    }
+
+    // Mettre à jour la position localement
+    square.style.top = positionY + 'px';
+    square.style.left = positionX + 'px';
+
+    // Envoyer la nouvelle position au serveur
+    socket.send(JSON.stringify({ x: positionX, y: positionY }));
+  });
+</script>
+
+</body>
+</html>
